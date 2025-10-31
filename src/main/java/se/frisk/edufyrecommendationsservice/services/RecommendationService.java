@@ -1,70 +1,44 @@
 package se.frisk.edufyrecommendationsservice.services;
 
 import org.springframework.stereotype.Service;
+import se.frisk.edufyrecommendationsservice.clients.HistoryClient;
+import se.frisk.edufyrecommendationsservice.clients.LikesClient;
+import se.frisk.edufyrecommendationsservice.clients.MusicClient;
 
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 @Service
 public class RecommendationService {
 
-    private final HistoryClient historyClient;
-    private final LikesClient likesClient;
+    private final HistoryClient history;
+    private final LikesClient likes;
+    private final MusicClient music;
 
-    public RecommendationService(HistoryClient historyClient, LikesClient likesClient) {
-        this.historyClient = historyClient;
-        this.likesClient = likesClient;
+    public RecommendationService(HistoryClient history, LikesClient likes, MusicClient music) {
+        this.history = history;
+        this.likes = likes;
+        this.music = music;
     }
 
-    public Optional<String> pickNextMediaId(String userId, String currentMediaId) {
+    public String pickNext(String userId, String currentMediaId) {
+        var genres   = Optional.ofNullable(history.getTopGenres(userId)).orElse(List.of());
+        var disliked = Optional.ofNullable(likes.getDislikedIds(userId)).orElse(List.of());
+        var played   = Optional.ofNullable(history.getPlayedIds(userId)).orElse(List.of());
+        var candidates = genres.isEmpty() ? List.<String>of() : music.getByGenres(genres, 20);
 
-        List<String> candidates = historyClient.getCandidates(userId, currentMediaId, 50);
-        Set<String> played = new HashSet<>(historyClient.getPlayedIds(userId));
-        Set<String> disliked = new HashSet<>(likesClient.getDislikedIds(userId));
-        Set<String> liked = new HashSet<>(likesClient.getLikedIds(userId));
-
-        List<String> filtered = candidates.stream()
-                .distinct()
-                .filter(id -> !id.equalsIgnoreCase(currentMediaId))
-                .filter(id -> !played.contains(id))
-                .filter(id -> !disliked.contains(id))
-                .toList();
-
-        if(filtered.isEmpty()) return Optional.empty();
-
-        List<String> sorted = new ArrayList<>(filtered);
-        sorted.sort((a,b) -> Boolean.compare(liked.contains(b), liked.contains(a)));
-        return Optional.of(sorted.get(0));
+        for (var id : candidates) {
+            if (!Objects.equals(id, currentMediaId) && !played.contains(id) && !disliked.contains(id)) {
+                return id;
+            }
+        }
+        return ""; // Controller returnerar 204 om tom sträng
     }
 
-
-
-    public List<String> toppTenRecommendation(String userId, int limit) {
-
-        List<String> fromTopGenres = historyClient.getTopGeneres(userId);
-        int mainCount = (int) Math.ceil(limit * 0.8);
-        int otherCount = limit - mainCount;
-
-        List<String> fromOtherGenres = historyClient.getCandidatesFromOtherGeneres(userId, otherCount * 2);
-
-
-        Set<String> played = new HashSet<>(historyClient.getPlayedIds(userId));
-        Set<String> disliked = new HashSet<>(likesClient.getDislikedIds(userId));
-        Set<String> liked = new HashSet<>(likesClient.getLikedIds(userId));
-
-        List<String> combined = new ArrayList<>();
-        combined.addAll(fromTopGenres);
-        combined.addAll(fromOtherGenres);
-
-        List<String> filtered = combined.stream()
-                .distinct()
-                .filter(id -> !played.contains(id))
-                .filter(id -> !disliked.contains(id))
-                .toList();
-
-        List<String> sorted = new ArrayList<>(filtered);
-        sorted.sort((a,b) -> Boolean.compare(played.contains(b), played.contains(a)));
-        return sorted.stream().limit(limit).toList();
-
+    public List<String> pickTop(String userId, int limit) {
+        var genres = Optional.ofNullable(history.getTopGenres(userId)).orElse(List.of());
+        var list = genres.isEmpty() ? List.<String>of() : music.getByGenres(genres, limit);
+        return list == null ? List.of() : list;
     }
-
 }

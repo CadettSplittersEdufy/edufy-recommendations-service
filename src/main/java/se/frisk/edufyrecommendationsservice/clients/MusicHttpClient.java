@@ -5,7 +5,6 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.RequestEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
-import se.frisk.edufyrecommendationsservice.client.MusicClient;
 
 import java.net.URI;
 import java.util.Collections;
@@ -18,13 +17,14 @@ public class MusicHttpClient implements MusicClient {
     private final String baseUrl;
 
     public MusicHttpClient(RestTemplate http,
-                           @Value("${app.services.musicBaseUrl}") String baseUrl) {
+                           @Value("${app.services.musicBaseUrl:}") String baseUrl) {
         this.http = http;
         this.baseUrl = trimSlash(baseUrl);
     }
 
     @Override
     public List<String> getByGenres(List<String> genres, int limit) {
+        if (baseUrl.isBlank()) return Collections.emptyList();
         try {
             String csv = String.join(",", genres);
             URI uri = URI.create(baseUrl + "/by-genres?genres=" + url(csv) + "&limit=" + limit);
@@ -38,6 +38,7 @@ public class MusicHttpClient implements MusicClient {
 
     @Override
     public List<String> getByGenresExcept(List<String> genres, int limit) {
+        if (baseUrl.isBlank()) return Collections.emptyList();
         try {
             String csv = String.join(",", genres);
             URI uri = URI.create(baseUrl + "/by-genres-except?genres=" + url(csv) + "&limit=" + limit);
@@ -50,5 +51,8 @@ public class MusicHttpClient implements MusicClient {
     }
 
     private static String url(String s) { return s.replace(" ", "%20"); }
-    private static String trimSlash(String s) { return s.endsWith("/") ? s.substring(0, s.length()-1) : s; }
+    private static String trimSlash(String s) {
+        if (s == null || s.isBlank()) return "";
+        return s.endsWith("/") ? s.substring(0, s.length() - 1) : s;
+    }
 }
