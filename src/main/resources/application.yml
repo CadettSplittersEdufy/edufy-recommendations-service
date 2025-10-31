@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: edufy-recommendations-service
+server:
+  port: 4575

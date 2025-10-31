@@ -5,7 +5,6 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.RequestEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
-import se.frisk.edufyrecommendationsservice.client.HistoryClient;
 
 import java.net.URI;
 import java.util.Collections;
@@ -18,13 +17,14 @@ public class HistoryHttpClient implements HistoryClient {
     private final String baseUrl;
 
     public HistoryHttpClient(RestTemplate http,
-                             @Value("${app.services.historyBaseUrl}") String baseUrl) {
+                             @Value("${app.services.historyBaseUrl:}") String baseUrl) {
         this.http = http;
         this.baseUrl = trimSlash(baseUrl);
     }
 
     @Override
     public List<String> getTopGenres(String userId) {
+        if (baseUrl.isBlank()) return Collections.emptyList();
         try {
             URI uri = URI.create(baseUrl + "/top-genres?userId=" + url(userId) + "&limit=3");
             var res = http.exchange(RequestEntity.get(uri).build(),
@@ -37,6 +37,7 @@ public class HistoryHttpClient implements HistoryClient {
 
     @Override
     public List<String> getPlayedIds(String userId) {
+        if (baseUrl.isBlank()) return Collections.emptyList();
         try {
             URI uri = URI.create(baseUrl + "/played/" + url(userId));
             var res = http.exchange(RequestEntity.get(uri).build(),
@@ -48,5 +49,8 @@ public class HistoryHttpClient implements HistoryClient {
     }
 
     private static String url(String s) { return s.replace(" ", "%20"); }
-    private static String trimSlash(String s) { return s.endsWith("/") ? s.substring(0, s.length()-1) : s; }
+    private static String trimSlash(String s) {
+        if (s == null || s.isBlank()) return "";
+        return s.endsWith("/") ? s.substring(0, s.length() - 1) : s;
+    }
 }
