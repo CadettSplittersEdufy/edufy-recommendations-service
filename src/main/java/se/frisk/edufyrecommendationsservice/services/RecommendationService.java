@@ -2,7 +2,7 @@ package se.frisk.edufyrecommendationsservice.services;
 
 import org.springframework.stereotype.Service;
 import se.frisk.edufyrecommendationsservice.clients.HistoryClient;
-import se.frisk.edufyrecommendationsservice.clients.LikesClient;
+import se.frisk.edufyrecommendationsservice.clients.RatingsClient;
 import se.frisk.edufyrecommendationsservice.clients.MusicClient;
 
 import java.util.List;
@@ -13,10 +13,10 @@ import java.util.Optional;
 public class RecommendationService {
 
     private final HistoryClient history;
-    private final LikesClient likes;
+    private final RatingsClient likes;
     private final MusicClient music;
 
-    public RecommendationService(HistoryClient history, LikesClient likes, MusicClient music) {
+    public RecommendationService(HistoryClient history, RatingsClient likes, MusicClient music) {
         this.history = history;
         this.likes = likes;
         this.music = music;
@@ -33,7 +33,7 @@ public class RecommendationService {
                 return id;
             }
         }
-        return ""; // Controller returnerar 204 om tom sträng
+        return "";,
     }
 
     public List<String> pickTop(String userId, int limit) {

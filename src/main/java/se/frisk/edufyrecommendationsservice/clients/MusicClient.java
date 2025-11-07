@@ -1,9 +1,10 @@
 package se.frisk.edufyrecommendationsservice.clients;
 
+import se.frisk.edufyrecommendationsservice.dto.MusicItem;
+
 import java.util.List;
 
-
 public interface MusicClient {
-    List<String> getByGenres(java.util.List<String> genres, int limit);
-    List<String> getByGenresExcept(java.util.List<String> genres, int limit);
+
+    List<MusicItem> getAvailableMusic();
 }

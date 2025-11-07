@@ -1,5 +1,18 @@
 spring:
   application:
     name: edufy-recommendations-service
+
 server:
   port: 4575
+
+services:
+  history:
+    base-url: http://localhost:4575
+  music:
+    base-url: http://localhost:4525
+  ratings:
+    base-url: http://localhost:4585
+  pod:
+    base-url: http://edufy-pod-service:4535
+  video:
+    base-url: http://edufy-video-service:4545

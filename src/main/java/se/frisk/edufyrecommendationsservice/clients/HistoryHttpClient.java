@@ -1,56 +1,36 @@
 package se.frisk.edufyrecommendationsservice.clients;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.RequestEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
+import se.frisk.edufyrecommendationsservice.dto.HistoryItem;
+import se.frisk.edufyrecommendationsservice.dto.MediaType;
 
-import java.net.URI;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
+
 
 @Component
 public class HistoryHttpClient implements HistoryClient {
 
-    private final RestTemplate http;
-    private final String baseUrl;
+    private final RestClient restClient;
 
-    public HistoryHttpClient(RestTemplate http,
-                             @Value("${app.services.historyBaseUrl:}") String baseUrl) {
-        this.http = http;
-        this.baseUrl = trimSlash(baseUrl);
+    public HistoryHttpClient(RestClient.Builder builder,
+                             @Value("${services.history.base-url}") String baseUrl) {
+        this.restClient = builder.baseUrl(baseUrl).build();
     }
+
 
     @Override
-    public List<String> getTopGenres(String userId) {
-        if (baseUrl.isBlank()) return Collections.emptyList();
-        try {
-            URI uri = URI.create(baseUrl + "/top-genres?userId=" + url(userId) + "&limit=3");
-            var res = http.exchange(RequestEntity.get(uri).build(),
-                    new ParameterizedTypeReference<List<String>>() {});
-            return res.getBody() != null ? res.getBody() : Collections.emptyList();
-        } catch (Exception e) {
-            return Collections.emptyList();
-        }
-    }
+    public List<HistoryItem> getHistory(String userId, MediaType mediaType) {
+        HistoryItem[] response = restClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/history/historyByType/{userId}/{itemType}")
+                        .queryParam("limit", 100)
+                        .build(userId, mediaType.name()))
+                .retrieve()
+                .body(HistoryItem[].class);
 
-    @Override
-    public List<String> getPlayedIds(String userId) {
-        if (baseUrl.isBlank()) return Collections.emptyList();
-        try {
-            URI uri = URI.create(baseUrl + "/played/" + url(userId));
-            var res = http.exchange(RequestEntity.get(uri).build(),
-                    new ParameterizedTypeReference<List<String>>() {});
-            return res.getBody() != null ? res.getBody() : Collections.emptyList();
-        } catch (Exception e) {
-            return Collections.emptyList();
-        }
-    }
-
-    private static String url(String s) { return s.replace(" ", "%20"); }
-    private static String trimSlash(String s) {
-        if (s == null || s.isBlank()) return "";
-        return s.endsWith("/") ? s.substring(0, s.length() - 1) : s;
+        return response == null ? List.of() : Arrays.asList(response);
     }
 }
