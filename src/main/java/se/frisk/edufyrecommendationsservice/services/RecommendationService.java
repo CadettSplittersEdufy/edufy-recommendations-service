@@ -127,9 +127,8 @@ public class RecommendationService {
                     idToCategory.put(id, category);
                 }
             });
-            case VIDEO -> videoClient.getAllVideos().forEach(v -> {
-                if (v != null && v.getId() != null
-                        && (v.getAvailable() == null || Boolean.TRUE.equals(v.getAvailable()))) {
+            case VIDEO -> videoClient.getAvailableVideos().forEach(v -> {
+                if (v != null && v.getId() != null) {
                     String id = v.getId().toString();
                     String category = v.getCategory();
                     candidates.add(new Candidate(id, category));
@@ -202,32 +201,27 @@ public class RecommendationService {
         Collections.shuffle(likedItems);
         Collections.shuffle(newCategoryItems);
 
-        // ---------- 8. 60% / 20% / 20% ----------
         int historyQuota = (int) Math.round(limit * 0.6);
         int likedQuota   = (int) Math.round(limit * 0.2);
         int newQuota     = limit - historyQuota - likedQuota;
 
         List<String> result = new ArrayList<>(limit);
 
-        // history
         int usedHistory = Math.min(historyQuota, historyItems.size());
         for (int i = 0; i < usedHistory; i++) {
             result.add(historyItems.get(i).id());
         }
 
-        // liked
         int usedLiked = Math.min(likedQuota, likedItems.size());
         for (int i = 0; i < usedLiked; i++) {
             result.add(likedItems.get(i).id());
         }
 
-        // nya
         int usedNew = Math.min(newQuota, newCategoryItems.size());
         for (int i = 0; i < usedNew; i++) {
             result.add(newCategoryItems.get(i).id());
         }
 
-        // ---------- 9. Fyll upp om vi inte nått limit ----------
         if (result.size() < limit) {
             List<Candidate> leftovers = new ArrayList<>();
             leftovers.addAll(historyItems.subList(usedHistory, historyItems.size()));

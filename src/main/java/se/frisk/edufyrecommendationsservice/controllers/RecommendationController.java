@@ -79,7 +79,7 @@ public class RecommendationController {
 
     @GetMapping("/test/video")
     public ResponseEntity<List<VideoItem>> testVideo() {
-        var videos = videoClient.getAllVideos();
+        var videos = videoClient.getAvailableVideos();
         System.out.println("Videos: " + videos.size());
         return ResponseEntity.ok(videos);
     }

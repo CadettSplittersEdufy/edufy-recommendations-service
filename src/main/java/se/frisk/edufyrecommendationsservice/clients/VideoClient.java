@@ -6,5 +6,5 @@ import java.util.List;
 
 public interface VideoClient {
 
-    List<VideoItem> getAllVideos();
+    List<VideoItem> getAvailableVideos();
 }

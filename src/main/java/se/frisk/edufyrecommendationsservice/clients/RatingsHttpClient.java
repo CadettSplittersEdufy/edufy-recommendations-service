@@ -19,38 +19,32 @@ public class RatingsHttpClient implements RatingsClient {
     }
 
     @Override
-    public List<String> getLikedIds(String userId){
+    public List<String> getLikedIds(String userId) {
         RatingItem[] response = restClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/api/ratings/user/{userId}")
-                        .build(userId))
-                .retrieve().body(RatingItem[].class);
+                .uri("/ratings/getlikesbyuser/{userId}", userId)
+                .retrieve()
+                .body(RatingItem[].class);
 
-        if(response == null){
-            return List.of();
-        }
+        if (response == null) return List.of();
+
         return Arrays.stream(response)
-                .filter(RatingItem::isLiked)
                 .map(RatingItem::getMediaId)
+                .filter(id -> id != null && !id.isBlank())
                 .toList();
     }
 
     @Override
-    public List<String> getDislikedIds(String userId){
+    public List<String> getDislikedIds(String userId) {
         RatingItem[] response = restClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/api/ratings/user/{userId}")
-                        .build(userId))
+                .uri("/ratings/getdislikesbyuser/{userId}", userId)
                 .retrieve()
                 .body(RatingItem[].class);
 
-        if(response == null){
-            return List.of();
-        }
+        if (response == null) return List.of();
 
         return Arrays.stream(response)
-                .filter(r -> !r.isLiked())
                 .map(RatingItem::getMediaId)
+                .filter(id -> id != null && !id.isBlank())
                 .toList();
     }
 }

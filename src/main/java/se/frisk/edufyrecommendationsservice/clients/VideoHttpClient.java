@@ -9,7 +9,7 @@ import java.util.Arrays;
 import java.util.List;
 
 @Component
-public class VideoHttpClient implements VideoClient{
+public class VideoHttpClient implements VideoClient {
 
     private final RestClient restClient;
 
@@ -19,9 +19,9 @@ public class VideoHttpClient implements VideoClient{
     }
 
     @Override
-    public List<VideoItem> getAllVideos(){
+    public List<VideoItem> getAvailableVideos() {
         VideoItem[] response = restClient.get()
-                .uri("/video/get/all")
+                .uri("/video/get/available")
                 .retrieve()
                 .body(VideoItem[].class);
 
