@@ -7,5 +7,9 @@ import java.util.List;
 
 public interface HistoryClient {
 
-    List<HistoryItem> getHistory(String userId, MediaType mediaType);
+    List<HistoryItem> getHistory(String userId, MediaType mediaType, int limit);
+
+    default List<HistoryItem> getHistory(String userId, MediaType mediaType) {
+        return getHistory(userId, mediaType, 100);
+    }
 }

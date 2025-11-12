@@ -9,7 +9,6 @@ import se.frisk.edufyrecommendationsservice.dto.MediaType;
 import java.util.Arrays;
 import java.util.List;
 
-
 @Component
 public class HistoryHttpClient implements HistoryClient {
 
@@ -20,13 +19,12 @@ public class HistoryHttpClient implements HistoryClient {
         this.restClient = builder.baseUrl(baseUrl).build();
     }
 
-
     @Override
-    public List<HistoryItem> getHistory(String userId, MediaType mediaType) {
+    public List<HistoryItem> getHistory(String userId, MediaType mediaType, int limit) {
         HistoryItem[] response = restClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/api/history/historyByType/{userId}/{itemType}")
-                        .queryParam("limit", 100)
+                        .queryParam("limit", limit)
                         .build(userId, mediaType.name()))
                 .retrieve()
                 .body(HistoryItem[].class);

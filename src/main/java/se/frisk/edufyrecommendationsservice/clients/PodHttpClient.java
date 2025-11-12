@@ -1,12 +1,14 @@
 package se.frisk.edufyrecommendationsservice.clients;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import se.frisk.edufyrecommendationsservice.dto.PodItem;
 
 import java.util.Arrays;
 import java.util.List;
 
+@Component
 public class PodHttpClient implements PodClient{
 
     private final RestClient restClient;
