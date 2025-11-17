@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30">
+    <Appenders>
+        <File name="FileLog" fileName="logs/app.log">
+            <PatternLayout pattern="%d{ISO8601} %-5p %c{36} - %msg%n"/>
+        </File>
+    </Appenders>
+
+    <Loggers>
+        <Logger name="org.springframework" level="error"/>
+
+        <Root level="error">
+            <AppenderRef ref="FileLog"/>
+        </Root>
+    </Loggers>
+</Configuration>
