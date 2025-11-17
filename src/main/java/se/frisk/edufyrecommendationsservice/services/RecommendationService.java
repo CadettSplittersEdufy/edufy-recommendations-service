@@ -1,9 +1,14 @@
 package se.frisk.edufyrecommendationsservice.services;
 
 import org.springframework.stereotype.Service;
-import se.frisk.edufyrecommendationsservice.clients.*;
+import se.frisk.edufyrecommendationsservice.clients.HistoryClient;
+import se.frisk.edufyrecommendationsservice.clients.MusicClient;
+import se.frisk.edufyrecommendationsservice.clients.PodClient;
+import se.frisk.edufyrecommendationsservice.clients.RatingsClient;
+import se.frisk.edufyrecommendationsservice.clients.VideoClient;
 import se.frisk.edufyrecommendationsservice.dto.HistoryItem;
 import se.frisk.edufyrecommendationsservice.dto.MediaType;
+import se.frisk.edufyrecommendationsservice.exceptions.DependencyUnavailableException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -29,122 +34,122 @@ public class RecommendationService {
         this.videoClient = videoClient;
     }
 
-    // ----------------------------------------------------
-    // 1. pickNext – EN föreslagen media
-    //    Samma urvalslogik som pickTop, men vi tar bara första
-    //    som inte är samma som currentMediaId.
-    // ----------------------------------------------------
     public String pickNext(String userId, String currentMediaId, MediaType mediaType) {
-        // Ta fram t.ex. 10 rekommendationer med vår urvalslogik
         List<String> candidates = calculateRecommendations(userId, mediaType, 10);
 
         if (candidates.isEmpty()) {
             return "";
         }
 
-        // Ta första som inte är samma som det som spelas nu
         return candidates.stream()
                 .filter(id -> !Objects.equals(id, currentMediaId))
                 .findFirst()
                 .orElse("");
     }
 
-    // ----------------------------------------------------
-    // 2. pickTop – lista med top N rekommendationer
-    //    Samma urvalslogik som pickNext, men vi returnerar
-    //    hela listan (upp till limit).
-    // ----------------------------------------------------
     public List<String> pickTop(String userId, int limit, MediaType mediaType) {
         if (limit <= 0) {
-            return List.of();
+            throw new IllegalArgumentException("limit must be greater than 0");
         }
         return calculateRecommendations(userId, mediaType, limit);
     }
 
-    // ----------------------------------------------------
-    // 3. Gemensam urvalsprocess
-    //
-    //    Steg:
-    //    1) Hämta historik (senaste ~50) och räkna top 3 kategorier.
-    //    2) Hämta liked/disliked IDs.
-    //    3) Hämta all media för aktuell typ (music/pod/video).
-    //    4) Filtrera bort dislikade + nyligen spelade.
-    //    5) Räkna top 3 liked-kategorier.
-    //    6) Dela upp i:
-    //          - historyItems (top 3 historik-kategorier)
-    //          - likedItems   (top 3 liked-kategorier)
-    //          - newItems     (övriga kategorier = "nya"/inte rekommenderade)
-    //    7) Försök ta ~60% / 20% / 20% (history/liked/new).
-    //    8) Fyll upp med rester om någon grupp tar slut.
-    // ----------------------------------------------------
     private List<String> calculateRecommendations(String userId, MediaType mediaType, int limit) {
 
-        // Lokal record för att hålla ihop id + kategori
         record Candidate(String id, String category) {}
 
-        // ---------- 1. Hämta historik ----------
-        var fullHistory = Optional.ofNullable(historyClient.getHistory(userId, mediaType))
-                .orElse(List.of());
+        List<HistoryItem> fullHistory;
+        try {
+            fullHistory = Optional.ofNullable(historyClient.getHistory(userId, mediaType))
+                    .orElse(List.of());
+        } catch (Exception e) {
+            System.out.println("Failed to get history for user: " + userId + ": " + e.getMessage());
+            fullHistory = List.of();
+        }
 
         int historyWindow = 50;
         List<HistoryItem> recentHistory = fullHistory.size() > historyWindow
                 ? fullHistory.subList(fullHistory.size() - historyWindow, fullHistory.size())
                 : fullHistory;
 
-        // IDs som nyligen spelats (från historiken)
         Set<String> recentPlayedIds = recentHistory.stream()
                 .map(HistoryItem::getItemId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        // ---------- 2. Likes & dislikes ----------
-        Set<String> dislikedSet = new HashSet<>(
-                Optional.ofNullable(ratingsClient.getDislikedIds(userId)).orElse(List.of())
-        );
+        Set<String> dislikedSet;
+        Set<String> likedIdSet;
 
-        Set<String> likedIdSet = new HashSet<>(
-                Optional.ofNullable(ratingsClient.getLikedIds(userId)).orElse(List.of())
-        );
+        try {
+            List<String> disliked = Optional.ofNullable(ratingsClient.getDislikedIds(userId)).orElse(List.of());
+            List<String> liked = Optional.ofNullable(ratingsClient.getLikedIds(userId)).orElse(List.of());
+            dislikedSet = new HashSet<>(disliked);
+            likedIdSet = new HashSet<>(liked);
+        } catch (Exception e) {
+            System.out.println("Failed to get Ratings for user:  " + userId + ": " + e.getMessage());
+            dislikedSet = Set.of();
+            likedIdSet = Set.of();
+        }
 
-        // ---------- 3. Bygg kandidater (id + kategori) + id->kategori-karta ----------
+        final Set<String> finalDislikedSet = dislikedSet;
+        final Set<String> finalLikedIdSet = likedIdSet;
+
         List<Candidate> candidates = new ArrayList<>();
         Map<String, String> idToCategory = new HashMap<>();
 
-        switch (mediaType) {
-            case MUSIC -> musicClient.getAvailableMusic().forEach(m -> {
-                if (m != null && m.getId() != null) {
-                    String id = m.getId().toString();
-                    String category = m.getCategory();
-                    candidates.add(new Candidate(id, category));
-                    idToCategory.put(id, category);
-                }
-            });
-            case POD -> podClient.getAvailablePods().forEach(p -> {
-                if (p != null && p.getId() != null) {
-                    String id = p.getId().toString();
-                    String category = p.getCategory();
-                    candidates.add(new Candidate(id, category));
-                    idToCategory.put(id, category);
-                }
-            });
-            case VIDEO -> videoClient.getAvailableVideos().forEach(v -> {
-                if (v != null && v.getId() != null) {
-                    String id = v.getId().toString();
-                    String category = v.getCategory();
-                    candidates.add(new Candidate(id, category));
-                    idToCategory.put(id, category);
-                }
-            });
+        try {
+            switch (mediaType) {
+                case MUSIC -> musicClient.getAvailableMusic().forEach(m -> {
+                    if (m != null && m.getId() != null) {
+                        String id = m.getId().toString();
+                        String category = m.getCategory();
+                        candidates.add(new Candidate(id, category));
+                        idToCategory.put(id, category);
+                    }
+                });
+                case POD -> podClient.getAvailablePods().forEach(p -> {
+                    if (p != null && p.getId() != null) {
+                        String id = p.getId().toString();
+                        String category = p.getCategory();
+                        candidates.add(new Candidate(id, category));
+                        idToCategory.put(id, category);
+                    }
+                });
+                case VIDEO -> videoClient.getAvailableVideos().forEach(v -> {
+                    if (v != null && v.getId() != null) {
+                        String id = v.getId().toString();
+                        String category = v.getCategory();
+                        candidates.add(new Candidate(id, category));
+                        idToCategory.put(id, category);
+                    }
+                });
+            }
+        } catch (Exception e) {
+            String msg;
+            switch (mediaType) {
+                case MUSIC -> msg = "No connection to Music – Song can not be selected.";
+                case POD   -> msg = "No connection to Pod – Pod can not be selected .";
+                case VIDEO -> msg = "No connection to Video – Video can not be selected .";
+                default    -> msg = "No connection to Media – Media can not be selected.";
+            }
+            throw new DependencyUnavailableException(msg, e);
         }
 
         if (candidates.isEmpty()) {
             return List.of();
         }
 
-        // ---------- 4. Räkna historiska kategorier via idToCategory ----------
+        if (fullHistory.isEmpty() && likedIdSet.isEmpty() && dislikedSet.isEmpty()) {
+            Collections.shuffle(candidates);
+            return candidates.stream()
+                    .map(Candidate::id)
+                    .limit(limit)
+                    .toList();
+        }
+
         Map<String, Long> historyCategoryCounts = recentHistory.stream()
-                .map(HistoryItem::getItemId)       // ta id från historiken
-                .map(idToCategory::get)            // slå upp kategori i katalogmapen
+                .map(HistoryItem::getItemId)
+                .map(idToCategory::get)
                 .filter(Objects::nonNull)
                 .collect(Collectors.groupingBy(c -> c, Collectors.counting()));
 
@@ -154,9 +159,8 @@ public class RecommendationService {
                 .map(Map.Entry::getKey)
                 .toList();
 
-        // ---------- 5. Filtrera bort dislikade + nyligen spelade ----------
         List<Candidate> filtered = candidates.stream()
-                .filter(c -> !dislikedSet.contains(c.id()))
+                .filter(c -> !finalDislikedSet.contains(c.id()))
                 .filter(c -> !recentPlayedIds.contains(c.id()))
                 .toList();
 
@@ -164,21 +168,19 @@ public class RecommendationService {
             return List.of();
         }
 
-        // ---------- 6. Top 3 liked-kategorier ----------
         Map<String, Long> likedCategoryCounts = filtered.stream()
-                .filter(c -> likedIdSet.contains(c.id()))
+                .filter(c -> finalLikedIdSet.contains(c.id()))
                 .map(Candidate::category)
                 .filter(Objects::nonNull)
                 .collect(Collectors.groupingBy(c -> c, Collectors.counting()));
 
         List<String> topLikedCategories = likedCategoryCounts.entrySet().stream()
-                .filter(e -> !topHistoryCategories.contains(e.getKey())) // undvik att samma kategori hamnar i båda
+                .filter(e -> !topHistoryCategories.contains(e.getKey()))
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
                 .limit(3)
                 .map(Map.Entry::getKey)
                 .toList();
 
-        // ---------- 7. Dela upp i grupper ----------
         List<Candidate> historyItems = new ArrayList<>();
         List<Candidate> likedItems = new ArrayList<>();
         List<Candidate> newCategoryItems = new ArrayList<>();
@@ -192,7 +194,6 @@ public class RecommendationService {
             } else if (topLikedCategories.contains(cat)) {
                 likedItems.add(c);
             } else {
-                // Inte i history-top3, inte i liked-top3 = "nya"/inte rekommenderade kategorier
                 newCategoryItems.add(c);
             }
         }
