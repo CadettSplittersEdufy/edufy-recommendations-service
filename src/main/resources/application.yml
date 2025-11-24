@@ -16,3 +16,6 @@ services:
     base-url:   http://edufy-video-service:4545
   ratings:
     base-url:   http://edufy-ratings-service:4585
+  user:
+    base-url: ${SERVICES_USER_BASE_URL:http://localhost:4515/users}
+
