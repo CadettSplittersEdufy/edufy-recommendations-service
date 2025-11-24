@@ -1,14 +1,11 @@
 package se.frisk.edufyrecommendationsservice.services;
 
 import org.springframework.stereotype.Service;
-import se.frisk.edufyrecommendationsservice.clients.HistoryClient;
-import se.frisk.edufyrecommendationsservice.clients.MusicClient;
-import se.frisk.edufyrecommendationsservice.clients.PodClient;
-import se.frisk.edufyrecommendationsservice.clients.RatingsClient;
-import se.frisk.edufyrecommendationsservice.clients.VideoClient;
+import se.frisk.edufyrecommendationsservice.clients.*;
 import se.frisk.edufyrecommendationsservice.dto.HistoryItem;
 import se.frisk.edufyrecommendationsservice.dto.MediaType;
 import se.frisk.edufyrecommendationsservice.exceptions.DependencyUnavailableException;
+import se.frisk.edufyrecommendationsservice.clients.UserClient;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -21,17 +18,20 @@ public class RecommendationService {
     private final MusicClient musicClient;
     private final PodClient podClient;
     private final VideoClient videoClient;
+    private final UserClient userClient;
 
     public RecommendationService(HistoryClient historyClient,
                                  RatingsClient ratingsClient,
                                  MusicClient musicClient,
                                  PodClient podClient,
-                                 VideoClient videoClient) {
+                                 VideoClient videoClient,
+                                 UserClient userClient) {
         this.historyClient = historyClient;
         this.ratingsClient = ratingsClient;
         this.musicClient = musicClient;
         this.podClient = podClient;
         this.videoClient = videoClient;
+        this.userClient = userClient;
     }
 
     public String pickNext(String userId, String currentMediaId, MediaType mediaType) {
