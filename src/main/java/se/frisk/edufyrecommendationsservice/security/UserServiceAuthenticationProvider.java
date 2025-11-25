@@ -39,7 +39,7 @@ public class UserServiceAuthenticationProvider implements AuthenticationProvider
         List<SimpleGrantedAuthority> authorities = new ArrayList<>();
         authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
 
-        if("admin".equalsIgnoreCase(user.getUsername())){
+        if (user.isAdmin()) {
             authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
         }
         return new UsernamePasswordAuthenticationToken(user.getId().toString(), null, authorities);
