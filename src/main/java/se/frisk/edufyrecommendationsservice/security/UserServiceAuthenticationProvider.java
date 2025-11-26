@@ -39,9 +39,12 @@ public class UserServiceAuthenticationProvider implements AuthenticationProvider
         List<SimpleGrantedAuthority> authorities = new ArrayList<>();
         authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
 
-        if("admin".equalsIgnoreCase(user.getUsername())){
+        String role = (user.getRole() != null) ? user.getRole() : "edufy_USER";
+
+        if ("edufy_ADMIN".equalsIgnoreCase(role)) {
             authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
         }
+
         return new UsernamePasswordAuthenticationToken(user.getId().toString(), null, authorities);
     }
 
