@@ -40,7 +40,7 @@ public class PodHttpClient implements PodClient{
     @Override
     public List<PodItem> getAvailablePods() {
         PodItem[] response = restClient.get()
-                .uri("/pod/available")
+                .uri("/pods/available")
                 .retrieve()
                 .body(PodItem[].class);
 
