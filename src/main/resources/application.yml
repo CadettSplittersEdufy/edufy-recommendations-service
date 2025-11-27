@@ -2,6 +2,20 @@ spring:
   application:
     name: edufy-recommendations-service
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8080/realms/edufy-realm
+
+
+jwt:
+  auth:
+    converter:
+      resource-id:
+        name: edufy-gateway-service
+      principle-attribute: preferred_username
+
 server:
   port: 4575
 
@@ -17,5 +31,5 @@ services:
   ratings:
     base-url:   http://edufy-ratings-service:4585
   user:
-    base-url: ${SERVICES_USER_BASE_URL:http://localhost:4515/users}
+    base-url: ${SERVICES_USER_BASE_URL:http://edufy-user-service:4515/users}
 
