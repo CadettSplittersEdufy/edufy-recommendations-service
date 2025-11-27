@@ -1,6 +1,7 @@
 package se.frisk.edufyrecommendationsservice.controllers;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import se.frisk.edufyrecommendationsservice.clients.*;
 import se.frisk.edufyrecommendationsservice.dto.*;
@@ -9,6 +10,7 @@ import se.frisk.edufyrecommendationsservice.services.RecommendationService;
 import java.util.List;
 
 @RestController
+@PreAuthorize("hasAnyAuthority('edufy_ADMIN','edufy_USER')")
 @RequestMapping("/api/recommendations")
 public class RecommendationController {
 

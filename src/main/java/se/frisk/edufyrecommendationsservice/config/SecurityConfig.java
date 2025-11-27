@@ -2,40 +2,27 @@ package se.frisk.edufyrecommendationsservice.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
-import se.frisk.edufyrecommendationsservice.security.UserServiceAuthenticationProvider;
+import se.frisk.edufyrecommendationsservice.converters.JwtAuthConverter;
 
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private final UserServiceAuthenticationProvider userServiceAuthenticationProvider;
-
-    public SecurityConfig(UserServiceAuthenticationProvider userServiceAuthenticationProvider) {
-        this.userServiceAuthenticationProvider = userServiceAuthenticationProvider;
-    }
-
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthConverter jwtAuthConverter) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/recommendations/test").permitAll()
-                        .requestMatchers("/api/recommendations/**").authenticated()
-                        .anyRequest().permitAll()
+                        .requestMatchers("/api/history/test").permitAll()
+                        .anyRequest().authenticated()
                 )
-                .httpBasic(basic -> {});
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthConverter))
+                );
+
         return http.build();
     }
 
-    @Bean
-    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-        return http.getSharedObject(AuthenticationManagerBuilder.class)
-                .authenticationProvider(userServiceAuthenticationProvider)
-                .build();
-    }
 }
